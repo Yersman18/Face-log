@@ -1,4 +1,4 @@
-"use client";
+"use client"; // Profile Page Component
 import React, { useState, useEffect } from 'react';
 import { User, Mail, Calendar, Badge, Edit, Camera, Save, X } from 'lucide-react';
 

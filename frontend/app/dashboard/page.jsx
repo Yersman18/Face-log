@@ -1,4 +1,4 @@
-"use client";
+"use client"; // Dashboard Page Component
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";

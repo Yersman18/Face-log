@@ -1,4 +1,4 @@
-"use client";
+"use client"; // Login Page Component
 import { useState } from "react";
 import { saveTokens } from "@/lib/api";
 
