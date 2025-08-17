@@ -82,10 +82,13 @@ TEMPLATES = [
 WSGI_APPLICATION = 'facelog.wsgi.application'
 
 # Base de datos desde el .env
-import dj_database_url
 DATABASES = {
-    'default': dj_database_url.parse(os.getenv("DATABASE_URL"))
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
 }
+# Si usas PostgreSQL, descomenta y configura la siguiente sección
 
 # Usuario personalizado
 AUTH_USER_MODEL = 'authentication.User'

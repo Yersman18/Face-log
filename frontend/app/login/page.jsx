@@ -1,57 +1,49 @@
 "use client";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import api from "@/lib/api";
-import Cookies from "js-cookie";
+import { saveTokens } from "@/lib/api";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const router = useRouter();
 
-  const handleSubmit = async (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    try {
-      const res = await api.post("/authentication/login/", { username, password });
 
-      // Guardar tokens
-      Cookies.set("access", res.data.access);
-      Cookies.set("refresh", res.data.refresh);
+    const res = await fetch("http://127.0.0.1:8000/api/auth/login/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
 
-      // Redirigir
-      router.push("/dashboard");
-    } catch (err) {
-      setError("Credenciales incorrectas");
+    if (res.ok) {
+      const data = await res.json();
+      saveTokens(data.access, data.refresh);
+      alert("✅ Login exitoso");
+      window.location.href = "/profile"; // redirigir
+    } else {
+      alert("❌ Usuario o contraseña incorrectos");
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white p-6 rounded-xl shadow-lg w-96"
-      >
-        <h2 className="text-2xl font-bold mb-4">Iniciar Sesión</h2>
-        {error && <p className="text-red-500">{error}</p>}
+    <div className="flex justify-center items-center h-screen">
+      <form onSubmit={handleLogin} className="p-6 bg-white shadow-lg rounded-lg">
+        <h1 className="text-xl font-bold mb-4">Iniciar Sesión</h1>
         <input
+          className="border p-2 w-full mb-2"
           type="text"
           placeholder="Usuario"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          className="w-full p-2 border rounded mb-3"
         />
         <input
+          className="border p-2 w-full mb-4"
           type="password"
           placeholder="Contraseña"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="w-full p-2 border rounded mb-3"
         />
-        <button
-          type="submit"
-          className="w-full bg-blue-600 text-white p-2 rounded"
-        >
+        <button className="bg-blue-500 text-white px-4 py-2 rounded">
           Entrar
         </button>
       </form>
