@@ -1,6 +1,13 @@
 // frontend/lib/api.js
 
-const API_URL = "http://127.0.0.1:8000/api/auth"; // tu backend
+// Puedes hacer una petición fetch así:
+const API_URL = "http://127.0.0.1:8000/api";
+
+// ejemplo
+const AUTH_URL = `${API_URL}/auth`;
+const ATTENDANCE_URL = `${API_URL}/attendance`;
+
+// tu backend
 
 // Guardar tokens en localStorage
 export function saveTokens(access, refresh) {
