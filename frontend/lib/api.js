@@ -1,13 +1,7 @@
 // frontend/lib/api.js
 
-// Puedes hacer una petición fetch así:
 const API_URL = "http://127.0.0.1:8000/api";
-
-// ejemplo
 const AUTH_URL = `${API_URL}/auth`;
-const ATTENDANCE_URL = `${API_URL}/attendance`;
-
-// tu backend
 
 // Guardar tokens en localStorage
 export function saveTokens(access, refresh) {
@@ -15,37 +9,57 @@ export function saveTokens(access, refresh) {
   localStorage.setItem("refresh", refresh);
 }
 
-// Obtener access token
+// Obtener tokens
 export function getAccessToken() {
   return localStorage.getItem("access");
 }
 
+export function getRefreshToken() {
+  return localStorage.getItem("refresh");
+}
+
 // Refrescar token si expiró
 export async function refreshToken() {
-  const refresh = localStorage.getItem("refresh");
+  const refresh = getRefreshToken();
   if (!refresh) return null;
 
-  const res = await fetch(`${API_URL}/token/refresh/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refresh }),
-  });
+  try {
+    const res = await fetch(`${AUTH_URL}/token/refresh/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh }),
+    });
 
-  if (res.ok) {
-    const data = await res.json();
-    saveTokens(data.access, refresh); // actualizamos el access
-    return data.access;
-  } else {
-    console.error("Error refrescando token");
+    if (res.ok) {
+      const data = await res.json();
+      saveTokens(data.access, refresh); // actualizamos el access
+      return data.access;
+    } else {
+      console.warn("⚠️ Refresh token inválido o expirado, limpiando sesión.");
+      clearTokens();
+      return null;
+    }
+  } catch (err) {
+    console.error("Error al refrescar token:", err);
+    clearTokens();
     return null;
   }
+}
+
+// Limpiar tokens (logout)
+export function clearTokens() {
+  localStorage.removeItem("access");
+  localStorage.removeItem("refresh");
 }
 
 // Fetch con auth automático
 export async function authFetch(url, options = {}) {
   let token = getAccessToken();
+
   if (!options.headers) options.headers = {};
-  options.headers["Authorization"] = `Bearer ${token}`;
+  if (token) {
+    options.headers["Authorization"] = `Bearer ${token}`;
+  }
 
   let res = await fetch(url, options);
 
@@ -55,6 +69,12 @@ export async function authFetch(url, options = {}) {
     if (token) {
       options.headers["Authorization"] = `Bearer ${token}`;
       res = await fetch(url, options); // reintenta la request
+    } else {
+      // si no hay token válido → forzar logout
+      return new Response(
+        JSON.stringify({ error: "No autorizado. Inicia sesión de nuevo." }),
+        { status: 401 }
+      );
     }
   }
 
