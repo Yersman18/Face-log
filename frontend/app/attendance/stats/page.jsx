@@ -29,7 +29,7 @@ export default function AttendanceStatsPage() {
     const fetchStats = async () => {
       try {
         setLoading(true);
-        const res = await authFetch("http://127.0.0.1:8000/api/attendance/stats/");
+        const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/attendance/stats/`);
         if (!res.ok) throw new Error("Error al obtener estadísticas");
 
         const data = await res.json();

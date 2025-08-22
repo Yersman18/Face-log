@@ -1,3 +1,4 @@
+//frontend/app/face-recognition/page.jsx
 "use client";
 import { useEffect, useState } from "react";
 import { User, Camera, Shield, AlertCircle, CheckCircle } from "lucide-react";
@@ -26,7 +27,7 @@ export default function FaceRecognitionPage() {
     async function fetchStatus() {
       try {
         setError(null);
-        const res = await authFetch("http://127.0.0.1:8000/api/face-recognition/status/");
+        const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/face-recognition/status/`);
         if (!res.ok) throw new Error("Error al obtener estado");
         const data = await res.json();
         setStatus(data);

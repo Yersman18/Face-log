@@ -81,7 +81,7 @@ export default function RegisterFacePage() {
     formData.append("image", file);
 
     try {
-      const res = await authFetch("http://127.0.0.1:8000/api/face-recognition/register/", {
+      const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/face-recognition/register/`, {
         method: "POST",
         body: formData,
       });

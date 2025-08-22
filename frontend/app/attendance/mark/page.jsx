@@ -49,7 +49,7 @@ export default function MarkAttendancePage() {
     setMessage("");
 
     try {
-      const res = await authFetch("http://127.0.0.1:8000/api/attendance/mark/", {
+      const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/attendance/mark/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

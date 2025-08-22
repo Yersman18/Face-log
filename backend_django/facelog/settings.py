@@ -84,10 +84,15 @@ WSGI_APPLICATION = 'facelog.wsgi.application'
 # Base de datos desde el .env
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'face-log',          # el nombre que diste en pgAdmin
+        'USER': 'postgres',            # el usuario de PostgreSQL
+        'PASSWORD': '12345',   # tu contraseña real
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
+
 # Si usas PostgreSQL, descomenta y configura la siguiente sección
 
 # Usuario personalizado

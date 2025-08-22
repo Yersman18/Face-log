@@ -15,7 +15,7 @@ export default function ExcuseReviewPage() {
   useEffect(() => {
     const fetchExcuse = async () => {
       try {
-        const res = await authFetch(`http://127.0.0.1:8000/api/excuses/${id}/`);
+        const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/excuses/${id}/`);
         if (!res.ok) throw new Error("Error al obtener excusa");
         const data = await res.json();
         setExcuse(data);
@@ -32,7 +32,7 @@ export default function ExcuseReviewPage() {
   const handleReview = async (newStatus) => {
     setLoading(true);
     try {
-      const res = await authFetch(`http://127.0.0.1:8000/api/excuses/${id}/review/`, {
+      const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/excuses/${id}/review/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),

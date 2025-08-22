@@ -42,7 +42,7 @@ export default function AttendanceReportPage() {
       try {
         setLoading(true);
         const res = await authFetch(
-          `http://127.0.0.1:8000/api/attendance/sessions/${id}/report/`
+          `${process.env.NEXT_PUBLIC_API_URL}/api/attendance/sessions/${id}/report/`
         );
 
         if (!res.ok) {

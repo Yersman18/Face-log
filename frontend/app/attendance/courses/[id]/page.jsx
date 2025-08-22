@@ -1,3 +1,4 @@
+//frontend/app/attendance/courses/[id]/page.jsx
 "use client";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
@@ -11,7 +12,7 @@ export default function CourseDetail() {
   useEffect(() => {
     async function fetchCourse() {
       try {
-        const res = await authFetch(`http://127.0.0.1:8000/api/attendance/courses/${id}/`);
+        const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/attendance/courses/${id}/`);
         if (res.ok) {
           const data = await res.json();
           setCourse(data);

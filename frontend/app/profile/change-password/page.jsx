@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Lock, Eye, EyeOff, Shield, CheckCircle, AlertCircle, KeyRound } from "lucide-react";
 
 // Simulamos authFetch y API_URL para el ejemplo
-const API_URL = "http://127.0.0.1:8000/api";
+const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/api`;
 const authFetch = async (url, options) => {
   await new Promise(resolve => setTimeout(resolve, 1500));
   // Simulación de diferentes respuestas

@@ -1,3 +1,4 @@
+//frontend/app/excuses/new/page.jsx
 "use client";
 import { useState } from "react";
 import { ArrowLeft, Plus, Upload, FileText, Send, CheckCircle, XCircle, AlertCircle, Calendar, MessageSquare } from "lucide-react";
