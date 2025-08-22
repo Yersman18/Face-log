@@ -1,12 +1,13 @@
+// frontend/app/register/page.jsx
 "use client";
 import { useState } from "react";
 import { User, Mail, Lock, Eye, EyeOff, UserCheck, GraduationCap, Shield, CheckCircle, AlertCircle, UserPlus } from "lucide-react";
 
-// Simulamos API_URL y saveTokens para el ejemplo
-const API_URL = "http://127.0.0.1:8000/api";
+const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/auth`; // Asegúrate que el backend escuche aquí
+
 const saveTokens = (access, refresh) => {
-  // En una implementación real, aquí guardarías los tokens
-  console.log("Tokens saved:", { access, refresh });
+  localStorage.setItem("tokens", JSON.stringify({ access, refresh }));
+  console.log("Tokens guardados:", { access, refresh });
 };
 
 export default function RegisterPage() {
@@ -17,8 +18,9 @@ export default function RegisterPage() {
     role: "student",
     student_id: "",
   });
+
   const [message, setMessage] = useState("");
-  const [messageType, setMessageType] = useState(""); // success, error
+  const [messageType, setMessageType] = useState(""); // success | error
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
@@ -28,12 +30,10 @@ export default function RegisterPage() {
     const { name, value } = e.target;
     setForm({ ...form, [name]: value });
 
-    // Limpiar error específico del campo
     if (fieldErrors[name]) {
       setFieldErrors(prev => ({ ...prev, [name]: null }));
     }
 
-    // Calcular fuerza de contraseña
     if (name === "password") {
       let strength = 0;
       if (value.length >= 8) strength += 25;
@@ -46,25 +46,10 @@ export default function RegisterPage() {
 
   const validateForm = () => {
     const errors = {};
-    
-    if (!form.username.trim()) {
-      errors.username = "El nombre de usuario es requerido";
-    } else if (form.username.length < 3) {
-      errors.username = "El nombre de usuario debe tener al menos 3 caracteres";
-    }
-
-    if (!form.email.trim()) {
-      errors.email = "El email es requerido";
-    } else if (!/\S+@\S+\.\S+/.test(form.email)) {
-      errors.email = "Ingresa un email válido";
-    }
-
-    if (!form.password) {
-      errors.password = "La contraseña es requerida";
-    } else if (form.password.length < 8) {
-      errors.password = "La contraseña debe tener al menos 8 caracteres";
-    }
-
+    if (!form.username.trim()) errors.username = "El nombre de usuario es requerido";
+    if (!form.email.trim()) errors.email = "El email es requerido";
+    if (!form.password) errors.password = "La contraseña es requerida";
+    if (form.password.length < 8) errors.password = "La contraseña debe tener al menos 8 caracteres";
     if (form.role === "student" && form.student_id && form.student_id.length < 3) {
       errors.student_id = "El ID de estudiante debe tener al menos 3 caracteres";
     }
@@ -88,10 +73,10 @@ export default function RegisterPage() {
   };
 
   const getRoleIcon = (role) => {
-    switch(role) {
-      case 'student': return <GraduationCap className="w-4 h-4" />;
-      case 'instructor': return <UserCheck className="w-4 h-4" />;
-      case 'admin': return <Shield className="w-4 h-4" />;
+    switch (role) {
+      case "student": return <GraduationCap className="w-4 h-4" />;
+      case "instructor": return <UserCheck className="w-4 h-4" />;
+      case "admin": return <Shield className="w-4 h-4" />;
       default: return <User className="w-4 h-4" />;
     }
   };
@@ -102,7 +87,7 @@ export default function RegisterPage() {
     setMessageType("");
 
     if (!validateForm()) {
-      setMessage("Por favor, corrige los errores en el formulario");
+      setMessage("Por favor, corrige los errores en el formulario.");
       setMessageType("error");
       return;
     }
@@ -110,23 +95,28 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      // Simulación de registro
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Simular diferentes respuestas
-      const isSuccess = Math.random() > 0.3;
-      
-      if (isSuccess) {
-        const mockTokens = {
-          access: "mock-access-token",
-          refresh: "mock-refresh-token"
-        };
-        
-        saveTokens(mockTokens.access, mockTokens.refresh);
+      const response = await fetch(`${API_URL}/registration/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: form.username,
+          email: form.email,
+          password1: form.password,
+          password2: form.password,
+          role: form.role,
+          student_id: form.student_id || undefined,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        saveTokens(data.access_token || data.access, data.refresh_token || data.refresh);
         setMessage("¡Registro exitoso! Tu cuenta ha sido creada correctamente.");
         setMessageType("success");
-        
-        // Limpiar formulario
+
         setTimeout(() => {
           setForm({
             username: "",
@@ -136,22 +126,15 @@ export default function RegisterPage() {
             student_id: "",
           });
           setPasswordStrength(0);
-        }, 2000);
-        
+        }, 1500);
       } else {
-        // Simular errores específicos del servidor
-        const mockErrors = {
-          username: ["Este nombre de usuario ya está en uso"],
-          email: ["Este email ya está registrado"],
-        };
-        
-        setFieldErrors(mockErrors);
-        setMessage("Ya existe una cuenta con estos datos. Intenta con información diferente.");
+        setFieldErrors(data);
+        setMessage("Ocurrió un error. Revisa los campos.");
         setMessageType("error");
       }
-    } catch (error) {
-      console.error("Registration error:", error);
-      setMessage("Error en la conexión con el servidor. Por favor, inténtalo de nuevo.");
+    } catch (err) {
+      console.error("Error al registrar:", err);
+      setMessage("Error de conexión con el servidor.");
       setMessageType("error");
     } finally {
       setLoading(false);

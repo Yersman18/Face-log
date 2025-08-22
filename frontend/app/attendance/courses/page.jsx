@@ -1,3 +1,4 @@
+//frontend/app/attendance/courses/page.jsx
 "use client";
 import { useEffect, useState } from "react";
 import { authFetch } from "@/lib/api";
@@ -12,7 +13,7 @@ export default function CoursesPage() {
     async function loadCourses() {
       try {
         setLoading(true);
-        const res = await authFetch("http://127.0.0.1:8000/api/attendance/courses/");
+        const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/attendance/courses/`);
         if (res.ok) {
           const data = await res.json();
           setCourses(data);

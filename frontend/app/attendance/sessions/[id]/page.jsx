@@ -11,7 +11,7 @@ export default function SessionDetail() {
   useEffect(() => {
     async function fetchSession() {
       try {
-        const res = await authFetch(`http://127.0.0.1:8000/api/attendance/sessions/${id}/`);
+        const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/attendance/sessions/${id}/`);
         if (!res.ok) throw new Error("Error al obtener la sesión");
         const data = await res.json();
         setSession(data);

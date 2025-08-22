@@ -96,7 +96,7 @@ export default function VerifyFacePage() {
     formData.append("session_id", sessionId.trim());
 
     try {
-      const res = await authFetch("http://127.0.0.1:8000/api/face-recognition/verify/", {
+      const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/face-recognition/verify/"`, {
         method: "POST",
         body: formData,
       });

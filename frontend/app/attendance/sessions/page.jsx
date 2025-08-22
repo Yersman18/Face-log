@@ -12,7 +12,7 @@ export default function AttendanceSessions() {
     async function fetchSessions() {
       try {
         setLoading(true);
-        const res = await authFetch("http://127.0.0.1:8000/api/attendance/sessions/");
+        const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/attendance/sessions/`);
         if (!res.ok) throw new Error("Error al obtener sesiones");
         const data = await res.json();
         setSessions(data);
