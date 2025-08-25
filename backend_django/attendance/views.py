@@ -13,6 +13,8 @@ from .serializers import (
     AttendanceSerializer, CreateAttendanceSessionSerializer,
     AttendanceStatsSerializer
 )
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])

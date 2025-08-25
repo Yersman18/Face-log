@@ -1,405 +1,343 @@
-// frontend/app/register/page.jsx
 "use client";
 import { useState } from "react";
-import { User, Mail, Lock, Eye, EyeOff, UserCheck, GraduationCap, Shield, CheckCircle, AlertCircle, UserPlus } from "lucide-react";
-
-const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/auth`; // Asegúrate que el backend escuche aquí
-
-const saveTokens = (access, refresh) => {
-  localStorage.setItem("tokens", JSON.stringify({ access, refresh }));
-  console.log("Tokens guardados:", { access, refresh });
-};
+import { Eye, EyeOff, Building2, Shield, Lock, User, Mail, UserCheck, CreditCard, ChevronDown } from "lucide-react";
 
 export default function RegisterPage() {
-  const [form, setForm] = useState({
+  const [formData, setFormData] = useState({
     username: "",
     email: "",
     password: "",
-    role: "student",
+    password_confirm: "",
+    first_name: "",
+    last_name: "",
+    role: "student", // por defecto
     student_id: "",
   });
 
-  const [message, setMessage] = useState("");
-  const [messageType, setMessageType] = useState(""); // success | error
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [passwordStrength, setPasswordStrength] = useState(0);
-  const [fieldErrors, setFieldErrors] = useState({});
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm({ ...form, [name]: value });
-
-    if (fieldErrors[name]) {
-      setFieldErrors(prev => ({ ...prev, [name]: null }));
-    }
-
-    if (name === "password") {
-      let strength = 0;
-      if (value.length >= 8) strength += 25;
-      if (/[a-z]/.test(value)) strength += 25;
-      if (/[A-Z]/.test(value)) strength += 25;
-      if (/[0-9]/.test(value) && /[!@#$%^&*(),.?":{}|<>]/.test(value)) strength += 25;
-      setPasswordStrength(strength);
-    }
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const validateForm = () => {
-    const errors = {};
-    if (!form.username.trim()) errors.username = "El nombre de usuario es requerido";
-    if (!form.email.trim()) errors.email = "El email es requerido";
-    if (!form.password) errors.password = "La contraseña es requerida";
-    if (form.password.length < 8) errors.password = "La contraseña debe tener al menos 8 caracteres";
-    if (form.role === "student" && form.student_id && form.student_id.length < 3) {
-      errors.student_id = "El ID de estudiante debe tener al menos 3 caracteres";
-    }
-
-    setFieldErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const getPasswordStrengthColor = () => {
-    if (passwordStrength <= 25) return "bg-red-500";
-    if (passwordStrength <= 50) return "bg-orange-500";
-    if (passwordStrength <= 75) return "bg-yellow-500";
-    return "bg-green-500";
-  };
-
-  const getPasswordStrengthText = () => {
-    if (passwordStrength <= 25) return "Débil";
-    if (passwordStrength <= 50) return "Regular";
-    if (passwordStrength <= 75) return "Fuerte";
-    return "Muy Fuerte";
-  };
-
-  const getRoleIcon = (role) => {
-    switch (role) {
-      case "student": return <GraduationCap className="w-4 h-4" />;
-      case "instructor": return <UserCheck className="w-4 h-4" />;
-      case "admin": return <Shield className="w-4 h-4" />;
-      default: return <User className="w-4 h-4" />;
-    }
-  };
-
-  const handleSubmit = async (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
-    setMessage("");
-    setMessageType("");
-
-    if (!validateForm()) {
-      setMessage("Por favor, corrige los errores en el formulario.");
-      setMessageType("error");
-      return;
-    }
-
     setLoading(true);
+    setMessage("");
 
     try {
-      const response = await fetch(`${API_URL}/registration/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          username: form.username,
-          email: form.email,
-          password1: form.password,
-          password2: form.password,
-          role: form.role,
-          student_id: form.student_id || undefined,
-        }),
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/auth/register/`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(formData),
+        }
+      );
 
-      const data = await response.json();
+      const data = await res.json();
 
-      if (response.ok) {
-        saveTokens(data.access_token || data.access, data.refresh_token || data.refresh);
-        setMessage("¡Registro exitoso! Tu cuenta ha sido creada correctamente.");
-        setMessageType("success");
-
-        setTimeout(() => {
-          setForm({
-            username: "",
-            email: "",
-            password: "",
-            role: "student",
-            student_id: "",
-          });
-          setPasswordStrength(0);
-        }, 1500);
+      if (res.ok) {
+        setMessage("✅ Registro exitoso, ahora puedes iniciar sesión");
+        setFormData({
+          username: "",
+          email: "",
+          password: "",
+          password_confirm: "",
+          first_name: "",
+          last_name: "",
+          role: "student",
+          student_id: "",
+        });
       } else {
-        setFieldErrors(data);
-        setMessage("Ocurrió un error. Revisa los campos.");
-        setMessageType("error");
+        setMessage(JSON.stringify(data));
       }
     } catch (err) {
-      console.error("Error al registrar:", err);
-      setMessage("Error de conexión con el servidor.");
-      setMessageType("error");
+      setMessage("❌ Error al conectar con el servidor");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4">
-      <div className="max-w-md w-full">
-        {/* Header */}
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Patrón de puntos de fondo */}
+      <div className="absolute inset-0 opacity-10">
+        <div className="absolute inset-0" style={{
+          backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px)',
+          backgroundSize: '20px 20px'
+        }}></div>
+      </div>
+      
+      {/* Círculos decorativos */}
+      <div className="absolute top-20 left-20 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl"></div>
+      <div className="absolute bottom-20 right-20 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl"></div>
+      
+      <div className="w-full max-w-lg relative z-10">
+        {/* Logo/Header Section */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-            <UserPlus className="h-8 w-8 text-blue-600" />
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl mb-4 shadow-2xl">
+            <Building2 className="w-10 h-10 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Crear Cuenta</h1>
-          <p className="text-gray-600">Únete a nuestra plataforma educativa</p>
+          <h1 className="text-3xl font-bold text-white mb-2">Portal Institucional</h1>
+          <p className="text-blue-200 text-sm">Crear nueva cuenta</p>
         </div>
 
-        {/* Form Card */}
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-6">
-            <div className="flex items-center space-x-3">
-              <User className="h-6 w-6 text-white" />
-              <div>
-                <h2 className="text-xl font-semibold text-white">Registro de Usuario</h2>
-                <p className="text-blue-100 text-sm">Completa tus datos para comenzar</p>
-              </div>
-            </div>
+        {/* Register Form */}
+        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-8 shadow-2xl">
+          <div className="flex items-center justify-center mb-6">
+            <UserCheck className="w-6 h-6 text-blue-300 mr-2" />
+            <h2 className="text-xl font-semibold text-white">Registro</h2>
           </div>
 
-          <div className="p-6">
-            {/* Message Alert */}
-            {message && (
-              <div className={`mb-6 p-4 rounded-lg border ${
-                messageType === 'success' 
-                  ? 'bg-green-50 border-green-200' 
-                  : 'bg-red-50 border-red-200'
-              }`}>
-                <div className="flex items-center">
-                  {messageType === 'success' ? (
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-3" />
-                  ) : (
-                    <AlertCircle className="h-5 w-5 text-red-500 mr-3" />
-                  )}
-                  <p className={`text-sm font-medium ${
-                    messageType === 'success' ? 'text-green-700' : 'text-red-700'
-                  }`}>
-                    {message}
-                  </p>
-                </div>
+          {message && (
+            <div className={`${
+              message.includes('✅') 
+                ? 'bg-green-500/20 border-green-500/30 text-green-200' 
+                : 'bg-red-500/20 border-red-500/30 text-red-200'
+            } p-4 rounded-2xl mb-6 text-sm backdrop-blur-sm`}>
+              <div className="flex items-center">
+                <div className={`w-2 h-2 ${
+                  message.includes('✅') ? 'bg-green-400' : 'bg-red-400'
+                } rounded-full mr-2`}></div>
+                {message}
               </div>
-            )}
+            </div>
+          )}
 
-            <div className="space-y-6">
-              {/* Username */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nombre de Usuario *
+          <form onSubmit={handleRegister} className="space-y-4">
+            {/* Fila 1: Nombre y Apellido */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-blue-100">
+                  Nombre
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center">
-                    <User className="h-5 w-5 text-gray-400" />
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <User className="h-4 w-4 text-blue-300" />
                   </div>
                   <input
                     type="text"
-                    name="username"
-                    value={form.username}
+                    name="first_name"
+                    placeholder="Tu nombre"
+                    value={formData.first_name}
                     onChange={handleChange}
-                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 transition-colors ${
-                      fieldErrors.username 
-                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
-                        : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                    }`}
-                    placeholder="Ingresa tu nombre de usuario"
-                    required
+                    className="w-full bg-white/10 border border-white/20 rounded-2xl py-3 pl-11 pr-4 text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-200 backdrop-blur-sm text-sm"
                   />
                 </div>
-                {fieldErrors.username && (
-                  <p className="mt-1 text-sm text-red-600">{fieldErrors.username}</p>
-                )}
               </div>
 
-              {/* Email */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Correo Electrónico *
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-blue-100">
+                  Apellido
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center">
-                    <Mail className="h-5 w-5 text-gray-400" />
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <User className="h-4 w-4 text-blue-300" />
                   </div>
                   <input
-                    type="email"
-                    name="email"
-                    value={form.email}
+                    type="text"
+                    name="last_name"
+                    placeholder="Tu apellido"
+                    value={formData.last_name}
                     onChange={handleChange}
-                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 transition-colors ${
-                      fieldErrors.email 
-                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
-                        : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                    }`}
-                    placeholder="correo@ejemplo.com"
-                    required
+                    className="w-full bg-white/10 border border-white/20 rounded-2xl py-3 pl-11 pr-4 text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-200 backdrop-blur-sm text-sm"
                   />
                 </div>
-                {fieldErrors.email && (
-                  <p className="mt-1 text-sm text-red-600">{fieldErrors.email}</p>
-                )}
               </div>
+            </div>
 
-              {/* Password */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Contraseña *
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center">
-                    <Lock className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    name="password"
-                    value={form.password}
-                    onChange={handleChange}
-                    className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 transition-colors ${
-                      fieldErrors.password 
-                        ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
-                        : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                    }`}
-                    placeholder="Crea una contraseña segura"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                    ) : (
-                      <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                    )}
-                  </button>
+            {/* Usuario */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-blue-100">
+                Usuario
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <User className="h-4 w-4 text-blue-300" />
                 </div>
-                
-                {/* Password Strength */}
-                {form.password && (
-                  <div className="mt-2">
-                    <div className="flex justify-between text-xs text-gray-600 mb-1">
-                      <span>Fuerza de la contraseña:</span>
-                      <span className="font-medium">{getPasswordStrengthText()}</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className={`h-2 rounded-full transition-all duration-300 ${getPasswordStrengthColor()}`}
-                        style={{ width: `${passwordStrength}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                )}
-                
-                {fieldErrors.password && (
-                  <p className="mt-1 text-sm text-red-600">{fieldErrors.password}</p>
-                )}
+                <input
+                  type="text"
+                  name="username"
+                  placeholder="Nombre de usuario"
+                  value={formData.username}
+                  onChange={handleChange}
+                  className="w-full bg-white/10 border border-white/20 rounded-2xl py-3 pl-11 pr-4 text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-200 backdrop-blur-sm text-sm"
+                  required
+                />
               </div>
+            </div>
 
-              {/* Role Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Tipo de Usuario *
+            {/* Email */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-blue-100">
+                Correo Electrónico
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Mail className="h-4 w-4 text-blue-300" />
+                </div>
+                <input
+                  type="email"
+                  name="email"
+                  placeholder="correo@ejemplo.com"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="w-full bg-white/10 border border-white/20 rounded-2xl py-3 pl-11 pr-4 text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-200 backdrop-blur-sm text-sm"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Fila 2: Rol y ID Estudiante */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-blue-100">
+                  Rol
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center">
-                    {getRoleIcon(form.role)}
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <Shield className="h-4 w-4 text-blue-300" />
                   </div>
                   <select
                     name="role"
-                    value={form.role}
+                    value={formData.role}
                     onChange={handleChange}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white"
+                    className="w-full bg-white/10 border border-white/20 rounded-2xl py-3 pl-11 pr-10 text-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-200 backdrop-blur-sm text-sm appearance-none"
                     required
                   >
-                    <option value="student">Estudiante</option>
-                    <option value="instructor">Instructor</option>
-                    <option value="admin">Administrador</option>
+                    <option value="student" className="bg-slate-800">Estudiante</option>
+                    <option value="instructor" className="bg-slate-800">Instructor</option>
                   </select>
+                  <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                    <ChevronDown className="h-4 w-4 text-blue-300" />
+                  </div>
                 </div>
               </div>
 
-              {/* Student ID (conditional) */}
-              {form.role === "student" && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    ID de Estudiante
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center">
-                      <GraduationCap className="h-5 w-5 text-gray-400" />
-                    </div>
-                    <input
-                      type="text"
-                      name="student_id"
-                      value={form.student_id}
-                      onChange={handleChange}
-                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 transition-colors ${
-                        fieldErrors.student_id 
-                          ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
-                          : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                      }`}
-                      placeholder="EST-2024-001 (opcional)"
-                    />
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-blue-100">
+                  ID Estudiante
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <CreditCard className="h-4 w-4 text-blue-300" />
                   </div>
-                  {fieldErrors.student_id && (
-                    <p className="mt-1 text-sm text-red-600">{fieldErrors.student_id}</p>
-                  )}
-                  <p className="mt-1 text-xs text-gray-500">
-                    Si eres estudiante, puedes agregar tu ID institucional
-                  </p>
+                  <input
+                    type="text"
+                    name="student_id"
+                    placeholder="ID de estudiante"
+                    value={formData.student_id}
+                    onChange={handleChange}
+                    className="w-full bg-white/10 border border-white/20 rounded-2xl py-3 pl-11 pr-4 text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-200 backdrop-blur-sm text-sm"
+                  />
                 </div>
-              )}
-
-              {/* Submit Button */}
-              <button
-                onClick={handleSubmit}
-                disabled={loading}
-                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-400 text-white font-medium py-3 px-4 rounded-lg transition-all duration-200 flex items-center justify-center space-x-2"
-              >
-                {loading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    <span>Creando cuenta...</span>
-                  </>
-                ) : (
-                  <>
-                    <UserPlus className="h-4 w-4" />
-                    <span>Crear Cuenta</span>
-                  </>
-                )}
-              </button>
+              </div>
             </div>
-          </div>
-        </div>
 
-        {/* Login Link */}
-        <div className="text-center mt-6">
-          <p className="text-gray-600">
-            ¿Ya tienes una cuenta?{' '}
-            <a href="/login" className="text-blue-600 hover:text-blue-700 font-medium transition-colors">
-              Inicia sesión aquí
-            </a>
-          </p>
-        </div>
+            {/* Contraseña */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-blue-100">
+                Contraseña
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Lock className="h-4 w-4 text-blue-300" />
+                </div>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  placeholder="Crea tu contraseña"
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="w-full bg-white/10 border border-white/20 rounded-2xl py-3 pl-11 pr-11 text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-200 backdrop-blur-sm text-sm"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-blue-300 hover:text-blue-200 transition-colors"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            </div>
 
-        {/* Security Notice */}
-        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-start space-x-3">
-            <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
-            <div>
-              <h4 className="font-medium text-blue-900 mb-1">Seguridad y Privacidad</h4>
-              <p className="text-sm text-blue-700">
-                Tu información está protegida con encriptación de última generación. 
-                Al registrarte, aceptas nuestros términos de servicio y política de privacidad.
+            {/* Confirmar Contraseña */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-blue-100">
+                Confirmar Contraseña
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Lock className="h-4 w-4 text-blue-300" />
+                </div>
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  name="password_confirm"
+                  placeholder="Confirma tu contraseña"
+                  value={formData.password_confirm}
+                  onChange={handleChange}
+                  className="w-full bg-white/10 border border-white/20 rounded-2xl py-3 pl-11 pr-11 text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-200 backdrop-blur-sm text-sm"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-blue-300 hover:text-blue-200 transition-colors"
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white py-4 px-6 rounded-2xl font-medium transition-all duration-200 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-xl hover:shadow-2xl mt-6"
+            >
+              {loading ? (
+                <div className="flex items-center justify-center">
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-3"></div>
+                  Registrando...
+                </div>
+              ) : (
+                "Crear Cuenta"
+              )}
+            </button>
+          </form>
+
+          {/* Footer */}
+          <div className="mt-8 pt-6 border-t border-white/10">
+            <div className="text-center">
+              <p className="text-blue-200 text-sm">
+                ¿Ya tienes una cuenta?{" "}
+                <a 
+                  href="/login"
+                  className="text-blue-300 hover:text-white underline transition-colors"
+                >
+                  Iniciar sesión
+                </a>
               </p>
             </div>
           </div>
+        </div>
+        {/* Additional info */}
+        <div className="text-center mt-6">
+          <p className="text-blue-200 text-xs">
+            Al registrarte, aceptas nuestros términos y condiciones de uso
+          </p>
         </div>
       </div>
     </div>

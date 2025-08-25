@@ -4,25 +4,26 @@ import { authFetch, API_URL } from "@/lib/api";
 
 export default function UpdateProfilePage() {
   const [form, setForm] = useState({
-    username: "",
+    first_name: "",
+    last_name: "",
     email: "",
     student_id: "",
-    role: "",
   });
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
   // Cargar datos actuales del perfil
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const res = await authFetch(`${API_URL}/auth/profile/`);
+        const res = await authFetch(`${API_URL}/api/auth/profile/`);
         const data = await res.json();
         if (res.ok) {
           setForm({
-            username: data.username || "",
+            first_name: data.first_name || "",
+            last_name: data.last_name || "",
             email: data.email || "",
             student_id: data.student_id || "",
-            role: data.role || "",
           });
         } else {
           setMessage("❌ Error al cargar perfil");
@@ -34,18 +35,19 @@ export default function UpdateProfilePage() {
     fetchProfile();
   }, []);
 
-  // Manejar cambios en formulario
+  // Manejar cambios
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // Enviar actualización
+  // Guardar cambios
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
+    setLoading(true);
 
     try {
-      const res = await authFetch(`${API_URL}/auth/profile/update/`, {
+      const res = await authFetch(`${API_URL}/api/auth/profile/update/`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
@@ -59,6 +61,8 @@ export default function UpdateProfilePage() {
       }
     } catch (error) {
       setMessage("❌ Error en la conexión con el servidor");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -68,9 +72,17 @@ export default function UpdateProfilePage() {
       <form onSubmit={handleSubmit} className="space-y-3">
         <input
           type="text"
-          name="username"
-          placeholder="Usuario"
-          value={form.username}
+          name="first_name"
+          placeholder="Nombre"
+          value={form.first_name}
+          onChange={handleChange}
+          className="w-full p-2 border rounded"
+        />
+        <input
+          type="text"
+          name="last_name"
+          placeholder="Apellido"
+          value={form.last_name}
           onChange={handleChange}
           className="w-full p-2 border rounded"
         />
@@ -91,22 +103,12 @@ export default function UpdateProfilePage() {
           className="w-full p-2 border rounded"
         />
 
-        <select
-          name="role"
-          value={form.role}
-          onChange={handleChange}
-          className="w-full p-2 border rounded"
-        >
-          <option value="student">Estudiante</option>
-          <option value="instructor">Instructor</option>
-          <option value="admin">Administrador</option>
-        </select>
-
         <button
           type="submit"
           className="w-full bg-green-600 text-white p-2 rounded"
+          disabled={loading}
         >
-          Guardar cambios
+          {loading ? "⏳ Guardando cambios..." : "Guardar cambios"}
         </button>
       </form>
       {message && <p className="mt-4 text-sm">{message}</p>}
