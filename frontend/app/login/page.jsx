@@ -1,14 +1,14 @@
 "use client";
 import { useState } from "react";
 import { saveTokens } from "@/lib/api";
-import { Eye, EyeOff, Building2, Shield, Lock, User } from "lucide-react";
+import { Eye, EyeOff, Building2, Shield, Lock, User, UserPlus } from "lucide-react";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -16,34 +16,29 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/auth/token/`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, password }),
-        }
-      );
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+
+      if (!res.ok) throw new Error("Credenciales inválidas");
 
       const data = await res.json();
+      saveTokens(data.access, data.refresh);
 
-      if (res.ok) {
-        saveTokens(data.access, data.refresh);
-        window.location.href = "/profile";
-      } else {
-        setError("❌ Usuario o contraseña incorrectos");
-      }
+      window.location.href = "/profile"; // Redirige al perfil
     } catch (err) {
-      console.error("Error:", err);
-      setError("❌ Error de conexión con el servidor");
+      console.error("❌ Error en login:", err);
+      setError("Usuario o contraseña incorrectos");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Patrón de puntos de fondo alternativo */}
+    <div className="min-h-screen bg-gradientDamd-to-br from-slate-900 via-blue-900 to-slate-800 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Patrón de puntos de fondo */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute inset-0" style={{
           backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px)',
@@ -92,10 +87,10 @@ export default function LoginPage() {
                 </div>
                 <input
                   type="text"
+                  placeholder="Ingresa tu usuario"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="w-full bg-white/10 border border-white/20 rounded-2xl py-4 pl-12 pr-4 text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-200 backdrop-blur-sm"
-                  placeholder="Ingresa tu usuario"
                   required
                 />
               </div>
@@ -111,10 +106,10 @@ export default function LoginPage() {
                 </div>
                 <input
                   type={showPassword ? "text" : "password"}
+                  placeholder="Ingresa tu contraseña"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full bg-white/10 border border-white/20 rounded-2xl py-4 pl-12 pr-12 text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-200 backdrop-blur-sm"
-                  placeholder="Ingresa tu contraseña"
                   required
                 />
                 <button
@@ -130,7 +125,6 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
-
             <button
               type="submit"
               disabled={isLoading}
@@ -139,16 +133,32 @@ export default function LoginPage() {
               {isLoading ? (
                 <div className="flex items-center justify-center">
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-3"></div>
-                  Iniciando sesión...
+                  Ingresando...
                 </div>
               ) : (
-                "Iniciar Sesión"
+                "Ingresar"
               )}
             </button>
           </form>
 
-          {/* Footer */}
+          {/* Register Link */}
           <div className="mt-8 pt-6 border-t border-white/10">
+            <div className="text-center">
+              <p className="text-blue-200 text-sm mb-4">
+                ¿No tienes cuenta?
+              </p>
+              <a 
+                href="/register" 
+                className="inline-flex items-center justify-center px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-2xl font-medium transition-all duration-200 transform hover:scale-[1.02] backdrop-blur-sm w-full sm:w-auto"
+              >
+                <UserPlus className="w-5 h-5 mr-2" />
+                Crear nueva cuenta
+              </a>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="mt-6 pt-4 border-t border-white/10">
             <div className="text-center">
               <p className="text-blue-200 text-sm">
                 Sistema seguro y protegido
