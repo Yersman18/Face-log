@@ -1,394 +1,469 @@
 # attendance/views.py
-from rest_framework import status, generics
+from rest_framework import status, generics, permissions
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
-from django.db.models import Q, Count
 from django.utils import timezone
-from datetime import datetime, date, timedelta
+from django.db.models import Q, Count
+from django.contrib.auth import get_user_model
 from .models import Course, AttendanceSession, Attendance
 from .serializers import (
     CourseSerializer, AttendanceSessionSerializer, 
-    AttendanceSerializer, CreateAttendanceSessionSerializer,
-    AttendanceStatsSerializer
+    AttendanceSerializer, AttendanceSessionCreateSerializer
 )
+
 from django.contrib.auth import get_user_model
 User = get_user_model()
 
-@api_view(['GET', 'POST'])
-@permission_classes([IsAuthenticated])
-def courses(request):
-    """Listar cursos o crear nuevo curso (solo instructores)"""
-    if request.method == 'GET':
-        if request.user.role == 'student':
-            # Estudiante ve solo sus cursos inscritos
-            user_courses = request.user.enrolled_courses.all()
-        else:
-            # Instructor ve sus cursos que dicta
-            user_courses = request.user.courses.all()
-        
-        serializer = CourseSerializer(user_courses, many=True)
-        return Response(serializer.data)
-    
-    elif request.method == 'POST':
-        if request.user.role != 'instructor':
-            return Response({
-                'error': 'Solo los instructores pueden crear cursos'
-            }, status=status.HTTP_403_FORBIDDEN)
-        
-        serializer = CourseSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(instructor=request.user)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-@api_view(['GET', 'PUT', 'DELETE'])
-@permission_classes([IsAuthenticated])
-def course_detail(request, course_id):
-    """Detalle, actualizar o eliminar curso"""
-    course = get_object_or_404(Course, id=course_id)
-    
-    # Verificar permisos
-    if request.user.role == 'student':
-        if course not in request.user.enrolled_courses.all():
-            return Response({
-                'error': 'No tienes acceso a este curso'
-            }, status=status.HTTP_403_FORBIDDEN)
-    elif request.user.role == 'instructor':
-        if course.instructor != request.user:
-            return Response({
-                'error': 'No eres el instructor de este curso'
-            }, status=status.HTTP_403_FORBIDDEN)
-    
-    if request.method == 'GET':
-        serializer = CourseSerializer(course)
-        return Response(serializer.data)
-    
-    elif request.method == 'PUT':
-        if request.user.role != 'instructor' or course.instructor != request.user:
-            return Response({
-                'error': 'No tienes permisos para editar este curso'
-            }, status=status.HTTP_403_FORBIDDEN)
-        
-        serializer = CourseSerializer(course, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    elif request.method == 'DELETE':
-        if request.user.role != 'instructor' or course.instructor != request.user:
-            return Response({
-                'error': 'No tienes permisos para eliminar este curso'
-            }, status=status.HTTP_403_FORBIDDEN)
-        
-        course.delete()
-        return Response({'message': 'Curso eliminado correctamente'})
+class IsInstructorPermission(permissions.BasePermission):
+    """Permiso personalizado para instructores"""
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.is_instructor()
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def enroll_student(request, course_id):
-    """Inscribir estudiante a un curso"""
-    if request.user.role != 'instructor':
-        return Response({
-            'error': 'Solo los instructores pueden inscribir estudiantes'
-        }, status=status.HTTP_403_FORBIDDEN)
-    
-    course = get_object_or_404(Course, id=course_id, instructor=request.user)
-    student_id = request.data.get('student_id')
-    
-    if not student_id:
-        return Response({
-            'error': 'Debe proporcionar student_id'
-        }, status=status.HTTP_400_BAD_REQUEST)
-    
-    try:
-        student = User.objects.get(id=student_id, role='student')
-        course.students.add(student)
-        return Response({'message': f'Estudiante {student.username} inscrito correctamente'})
-    except User.DoesNotExist:
-        return Response({
-            'error': 'Estudiante no encontrado'
-        }, status=status.HTTP_404_NOT_FOUND)
+class IsStudentPermission(permissions.BasePermission):
+    """Permiso personalizado para estudiantes"""
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.is_student()
 
-@api_view(['GET', 'POST'])
-@permission_classes([IsAuthenticated])
-def attendance_sessions(request):
-    """Listar sesiones de asistencia o crear nueva sesión"""
-    if request.method == 'GET':
-        course_id = request.query_params.get('course_id')
-        date_from = request.query_params.get('date_from')
-        date_to = request.query_params.get('date_to')
-        
-        sessions = AttendanceSession.objects.all()
-        
-        if request.user.role == 'student':
-            # Filtrar por cursos del estudiante
-            user_courses = request.user.enrolled_courses.all()
-            sessions = sessions.filter(course__in=user_courses)
-        elif request.user.role == 'instructor':
-            # Filtrar por cursos del instructor
-            sessions = sessions.filter(course__instructor=request.user)
-        
-        if course_id:
-            sessions = sessions.filter(course_id=course_id)
-        
-        if date_from:
-            sessions = sessions.filter(date__gte=date_from)
-        
-        if date_to:
-            sessions = sessions.filter(date__lte=date_to)
-        
-        sessions = sessions.order_by('-date', '-start_time')
-        serializer = AttendanceSessionSerializer(sessions, many=True)
-        return Response(serializer.data)
-    
-    elif request.method == 'POST':
-        if request.user.role != 'instructor':
-            return Response({
-                'error': 'Solo los instructores pueden crear sesiones de asistencia'
-            }, status=status.HTTP_403_FORBIDDEN)
-        
-        serializer = CreateAttendanceSessionSerializer(data=request.data)
-        if serializer.is_valid():
-            course = serializer.validated_data['course']
-            
-            # Verificar que el instructor sea dueño del curso
-            if course.instructor != request.user:
-                return Response({
-                    'error': 'No eres el instructor de este curso'
-                }, status=status.HTTP_403_FORBIDDEN)
-            
-            session = serializer.save()
-            
-            # Crear registros de asistencia para todos los estudiantes del curso
-            for student in course.students.all():
-                Attendance.objects.create(
-                    session=session,
-                    student=student,
-                    status='absent'  # Por defecto ausente
-                )
-            
-            return Response(AttendanceSessionSerializer(session).data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+# ===============================
+# VIEWS PARA CURSOS
+# ===============================
 
-@api_view(['GET', 'PUT', 'DELETE'])
-@permission_classes([IsAuthenticated])
-def attendance_session_detail(request, session_id):
-    """Detalle, actualizar o eliminar sesión de asistencia"""
-    session = get_object_or_404(AttendanceSession, id=session_id)
+class CourseListCreateView(generics.ListCreateAPIView):
+    """Lista y crea cursos"""
+    serializer_class = CourseSerializer
+    permission_classes = [permissions.IsAuthenticated]
     
-    # Verificar permisos
-    if request.user.role == 'student':
-        if session.course not in request.user.enrolled_courses.all():
-            return Response({
-                'error': 'No tienes acceso a esta sesión'
-            }, status=status.HTTP_403_FORBIDDEN)
-    elif request.user.role == 'instructor':
-        if session.course.instructor != request.user:
-            return Response({
-                'error': 'No eres el instructor de este curso'
-            }, status=status.HTTP_403_FORBIDDEN)
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_instructor():
+            return Course.objects.filter(instructor=user)
+        elif user.is_student():
+            # Estudiantes ven cursos de su ficha
+            try:
+                student_profile = user.student_profile
+                return Course.objects.filter(fichas=student_profile.ficha)
+            except:
+                return Course.objects.none()
+        return Course.objects.all()
     
-    if request.method == 'GET':
-        serializer = AttendanceSessionSerializer(session)
-        return Response(serializer.data)
+    def perform_create(self, serializer):
+        # Solo instructores pueden crear cursos
+        if not self.request.user.is_instructor():
+            raise permissions.PermissionDenied("Solo los instructores pueden crear cursos")
+        serializer.save(instructor=self.request.user)
+
+class CourseDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """Detalle, actualización y eliminación de cursos"""
+    serializer_class = CourseSerializer
+    permission_classes = [permissions.IsAuthenticated]
     
-    elif request.method == 'PUT':
-        if request.user != session.course.instructor:
-            return Response({
-                'error': 'No tienes permisos para editar esta sesión'
-            }, status=status.HTTP_403_FORBIDDEN)
-        
-        serializer = AttendanceSessionSerializer(session, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_instructor():
+            return Course.objects.filter(instructor=user)
+        return Course.objects.all()
+
+# ===============================
+# VIEWS PARA SESIONES DE ASISTENCIA
+# ===============================
+
+class AttendanceSessionListCreateView(generics.ListCreateAPIView):
+    """Lista y crea sesiones de asistencia"""
+    permission_classes = [permissions.IsAuthenticated]
     
-    elif request.method == 'DELETE':
-        if request.user != session.course.instructor:
-            return Response({
-                'error': 'No tienes permisos para eliminar esta sesión'
-            }, status=status.HTTP_403_FORBIDDEN)
-        
-        session.delete()
-        return Response({'message': 'Sesión eliminada correctamente'})
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return AttendanceSessionCreateSerializer
+        return AttendanceSessionSerializer
+    
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_instructor():
+            return AttendanceSession.objects.filter(course__instructor=user).order_by('-date', '-start_time')
+        elif user.is_student():
+            try:
+                student_profile = user.student_profile
+                return AttendanceSession.objects.filter(
+                    course__fichas=student_profile.ficha
+                ).order_by('-date', '-start_time')
+            except:
+                return AttendanceSession.objects.none()
+        return AttendanceSession.objects.all()
+    
+    def perform_create(self, serializer):
+        if not self.request.user.is_instructor():
+            raise permissions.PermissionDenied("Solo los instructores pueden crear sesiones")
+        serializer.save()
+
+class AttendanceSessionDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """Detalle de sesión de asistencia"""
+    serializer_class = AttendanceSessionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_instructor():
+            return AttendanceSession.objects.filter(course__instructor=user)
+        return AttendanceSession.objects.all()
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def mark_attendance(request):
-    """Marcar asistencia (con o sin reconocimiento facial)"""
-    session_id = request.data.get('session_id')
-    student_id = request.data.get('student_id', request.user.id)
-    status_attendance = request.data.get('status', 'present')
-    verified_by_face = request.data.get('verified_by_face', False)
-    
-    if not session_id:
-        return Response({
-            'error': 'Debe proporcionar session_id'
-        }, status=status.HTTP_400_BAD_REQUEST)
-    
-    session = get_object_or_404(AttendanceSession, id=session_id)
-    
-    # Solo instructores pueden marcar asistencia de otros estudiantes
-    if request.user.role == 'student' and student_id != request.user.id:
-        return Response({
-            'error': 'Los estudiantes solo pueden marcar su propia asistencia'
-        }, status=status.HTTP_403_FORBIDDEN)
-    
-    # Verificar que la sesión esté activa
-    if not session.is_active:
-        return Response({
-            'error': 'Esta sesión de asistencia no está activa'
-        }, status=status.HTTP_400_BAD_REQUEST)
-    
-    # Obtener el estudiante
-    if request.user.role == 'instructor':
-        student = get_object_or_404(User, id=student_id, role='student')
-    else:
-        student = request.user
-    
-    # Verificar que el estudiante esté inscrito en el curso
-    if student not in session.course.students.all():
-        return Response({
-            'error': 'El estudiante no está inscrito en este curso'
-        }, status=status.HTTP_400_BAD_REQUEST)
-    
-    # Buscar o crear registro de asistencia
-    attendance, created = Attendance.objects.get_or_create(
-        session=session,
-        student=student,
-        defaults={
-            'status': status_attendance,
-            'verified_by_face': verified_by_face,
-            'check_in_time': timezone.now() if status_attendance == 'present' else None
-        }
+@permission_classes([IsInstructorPermission])
+def start_attendance_session(request, session_id):
+    """Inicia una sesión de asistencia"""
+    session = get_object_or_404(
+        AttendanceSession, 
+        id=session_id, 
+        course__instructor=request.user
     )
     
-    if not created:
-        # Actualizar registro existente
-        attendance.status = status_attendance
-        attendance.verified_by_face = verified_by_face
-        if status_attendance == 'present':
-            attendance.check_in_time = timezone.now()
-        attendance.save()
+    if session.attendance_started:
+        return Response({
+            'error': 'La sesión de asistencia ya fue iniciada'
+        }, status=status.HTTP_400_BAD_REQUEST)
     
-    serializer = AttendanceSerializer(attendance)
+    session.start_attendance()
+    
     return Response({
-        'message': 'Asistencia marcada correctamente',
-        'attendance': serializer.data
+        'message': 'Sesión de asistencia iniciada correctamente',
+        'session_id': session.id,
+        'started_at': session.attendance_started_at,
+        'students_count': session.course.get_students_count()
+    })
+
+@api_view(['POST'])
+@permission_classes([IsInstructorPermission])
+def close_attendance_session(request, session_id):
+    """Cierra una sesión de asistencia"""
+    session = get_object_or_404(
+        AttendanceSession,
+        id=session_id,
+        course__instructor=request.user
+    )
+    
+    if session.attendance_closed:
+        return Response({
+            'error': 'La sesión de asistencia ya fue cerrada'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    if not session.attendance_started:
+        return Response({
+            'error': 'La sesión de asistencia no ha sido iniciada'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    session.close_attendance()
+    summary = session.get_attendance_summary()
+    
+    return Response({
+        'message': 'Sesión de asistencia cerrada correctamente',
+        'session_id': session.id,
+        'closed_at': session.attendance_closed_at,
+        'summary': summary
     })
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def my_attendance(request):
-    """Obtener asistencias del usuario autenticado"""
-    if request.user.role != 'student':
-        return Response({
-            'error': 'Solo los estudiantes pueden ver sus asistencias'
-        }, status=status.HTTP_403_FORBIDDEN)
+@permission_classes([permissions.IsAuthenticated])
+def session_attendance_summary(request, session_id):
+    """Obtiene resumen de asistencia de una sesión"""
+    session = get_object_or_404(AttendanceSession, id=session_id)
     
-    course_id = request.query_params.get('course_id')
-    date_from = request.query_params.get('date_from')
-    date_to = request.query_params.get('date_to')
+    # Verificar permisos
+    user = request.user
+    if user.is_instructor():
+        if session.course.instructor != user:
+            return Response({
+                'error': 'No tienes permisos para ver esta sesión'
+            }, status=status.HTTP_403_FORBIDDEN)
+    elif user.is_student():
+        try:
+            student_profile = user.student_profile
+            if not session.course.fichas.filter(id=student_profile.ficha.id).exists():
+                return Response({
+                    'error': 'No tienes permisos para ver esta sesión'
+                }, status=status.HTTP_403_FORBIDDEN)
+        except:
+            return Response({
+                'error': 'Perfil de estudiante no encontrado'
+            }, status=status.HTTP_404_NOT_FOUND)
     
-    attendances = Attendance.objects.filter(student=request.user)
+    summary = session.get_attendance_summary()
+    attendances = session.attendances.select_related('student', 'student__student_profile').all()
     
-    if course_id:
-        attendances = attendances.filter(session__course_id=course_id)
-    
-    if date_from:
-        attendances = attendances.filter(session__date__gte=date_from)
-    
-    if date_to:
-        attendances = attendances.filter(session__date__lte=date_to)
-    
-    attendances = attendances.order_by('-session__date', '-session__start_time')
-    serializer = AttendanceSerializer(attendances, many=True)
-    return Response(serializer.data)
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def attendance_report(request, session_id):
-    """Reporte de asistencia de una sesión (solo instructores)"""
-    if request.user.role != 'instructor':
-        return Response({
-            'error': 'Solo los instructores pueden ver reportes de asistencia'
-        }, status=status.HTTP_403_FORBIDDEN)
-    
-    session = get_object_or_404(AttendanceSession, id=session_id, course__instructor=request.user)
-    attendances = Attendance.objects.filter(session=session).select_related('student')
-    
-    serializer = AttendanceSerializer(attendances, many=True)
-    
-    # Estadísticas
-    total_students = attendances.count()
-    present_count = attendances.filter(status='present').count()
-    absent_count = attendances.filter(status='absent').count()
-    late_count = attendances.filter(status='late').count()
-    excused_count = attendances.filter(status='excused').count()
+    attendance_data = []
+    for attendance in attendances:
+        student_info = attendance.get_student_info()
+        attendance_data.append({
+            'id': attendance.id,
+            'student': {
+                'id': attendance.student.id,
+                'name': student_info['name'],
+                'document': student_info.get('document', 'N/A'),
+                'ficha': student_info.get('ficha', 'N/A'),
+            },
+            'status': attendance.status,
+            'status_display': attendance.get_status_display(),
+            'check_in_time': attendance.check_in_time,
+            'verified_by_face': attendance.verified_by_face,
+            'face_confidence_score': attendance.face_confidence_score,
+            'duration_minutes': attendance.get_duration_minutes(),
+        })
     
     return Response({
-        'session': AttendanceSessionSerializer(session).data,
-        'attendances': serializer.data,
-        'stats': {
-            'total_students': total_students,
-            'present': present_count,
-            'absent': absent_count,
-            'late': late_count,
-            'excused': excused_count,
-            'attendance_rate': (present_count / total_students * 100) if total_students > 0 else 0
+        'session': {
+            'id': session.id,
+            'course': session.course.name,
+            'date': session.date,
+            'start_time': session.start_time,
+            'end_time': session.end_time,
+            'is_active': session.is_active,
+            'attendance_started': session.attendance_started,
+            'attendance_closed': session.attendance_closed,
+        },
+        'summary': summary,
+        'attendances': attendance_data
+    })
+
+# ===============================
+# VIEWS PARA ASISTENCIA
+# ===============================
+
+class AttendanceListView(generics.ListAPIView):
+    """Lista asistencias"""
+    serializer_class = AttendanceSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        user = self.request.user
+        queryset = Attendance.objects.select_related(
+            'session', 'session__course', 'student'
+        ).order_by('-session__date', '-session__start_time')
+        
+        if user.is_instructor():
+            queryset = queryset.filter(session__course__instructor=user)
+        elif user.is_student():
+            queryset = queryset.filter(student=user)
+        
+        # Filtros opcionales
+        session_id = self.request.query_params.get('session_id')
+        course_id = self.request.query_params.get('course_id')
+        status_filter = self.request.query_params.get('status')
+        date_from = self.request.query_params.get('date_from')
+        date_to = self.request.query_params.get('date_to')
+        
+        if session_id:
+            queryset = queryset.filter(session_id=session_id)
+        if course_id:
+            queryset = queryset.filter(session__course_id=course_id)
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        if date_from:
+            queryset = queryset.filter(session__date__gte=date_from)
+        if date_to:
+            queryset = queryset.filter(session__date__lte=date_to)
+            
+        return queryset
+
+@api_view(['PUT'])
+@permission_classes([IsInstructorPermission])
+def update_attendance(request, attendance_id):
+    """Actualiza manualmente una asistencia (solo instructores)"""
+    attendance = get_object_or_404(
+        Attendance,
+        id=attendance_id,
+        session__course__instructor=request.user
+    )
+    
+    new_status = request.data.get('status')
+    reason = request.data.get('reason', '')
+    
+    if new_status not in ['present', 'absent', 'late', 'excused']:
+        return Response({
+            'error': 'Estado inválido'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    old_status = attendance.status
+    attendance.status = new_status
+    attendance.manual_override = True
+    attendance.override_reason = reason
+    attendance.modified_by = request.user
+    
+    # Si se marca como presente/tarde, establecer check_in_time si no existe
+    if new_status in ['present', 'late'] and not attendance.check_in_time:
+        attendance.check_in_time = timezone.now()
+    elif new_status in ['absent', 'excused']:
+        attendance.check_in_time = None
+        attendance.verified_by_face = False
+        attendance.face_confidence_score = None
+    
+    attendance.save()
+    
+    return Response({
+        'message': f'Asistencia actualizada de {old_status} a {new_status}',
+        'attendance': {
+            'id': attendance.id,
+            'status': attendance.status,
+            'status_display': attendance.get_status_display(),
+            'manual_override': attendance.manual_override,
+            'override_reason': attendance.override_reason,
+            'check_in_time': attendance.check_in_time
         }
     })
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def attendance_stats(request):
-    """Estadísticas de asistencia"""
-    course_id = request.query_params.get('course_id')
-    
-    if request.user.role == 'student':
-        # Estadísticas del estudiante
-        attendances = Attendance.objects.filter(student=request.user)
-        if course_id:
-            attendances = attendances.filter(session__course_id=course_id)
-        
-        total = attendances.count()
-        present = attendances.filter(status='present').count()
-        absent = attendances.filter(status='absent').count()
-        late = attendances.filter(status='late').count()
-        excused = attendances.filter(status='excused').count()
-        
+@permission_classes([permissions.IsAuthenticated])
+def student_attendance_history(request):
+    """Historial de asistencia del estudiante autenticado"""
+    if not request.user.is_student():
         return Response({
-            'total_sessions': total,
-            'present': present,
-            'absent': absent,
-            'late': late,
-            'excused': excused,
-            'attendance_rate': (present / total * 100) if total > 0 else 0
+            'error': 'Solo disponible para estudiantes'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    attendances = Attendance.objects.filter(
+        student=request.user
+    ).select_related(
+        'session', 'session__course'
+    ).order_by('-session__date', '-session__start_time')
+    
+    # Paginación manual simple
+    page_size = 20
+    page = int(request.query_params.get('page', 1))
+    start = (page - 1) * page_size
+    end = start + page_size
+    
+    paginated_attendances = attendances[start:end]
+    
+    data = []
+    for attendance in paginated_attendances:
+        data.append({
+            'id': attendance.id,
+            'course': {
+                'name': attendance.session.course.name,
+                'code': attendance.session.course.code,
+            },
+            'session': {
+                'date': attendance.session.date,
+                'start_time': attendance.session.start_time,
+                'end_time': attendance.session.end_time,
+            },
+            'status': attendance.status,
+            'status_display': attendance.get_status_display(),
+            'check_in_time': attendance.check_in_time,
+            'verified_by_face': attendance.verified_by_face,
+            'duration_minutes': attendance.get_duration_minutes(),
         })
     
-    elif request.user.role == 'instructor':
-        # Estadísticas del instructor
-        courses = request.user.courses.all()
-        if course_id:
-            courses = courses.filter(id=course_id)
-        
-        sessions = AttendanceSession.objects.filter(course__in=courses)
-        attendances = Attendance.objects.filter(session__in=sessions)
-        
-        total_sessions = sessions.count()
-        total_attendances = attendances.count()
-        present = attendances.filter(status='present').count()
-        absent = attendances.filter(status='absent').count()
-        
-        return Response({
-            'total_courses': courses.count(),
+    # Estadísticas generales
+    try:
+        stats = request.user.student_profile.get_attendance_stats()
+    except:
+        stats = {}
+    
+    return Response({
+        'attendances': data,
+        'stats': stats,
+        'pagination': {
+            'page': page,
+            'page_size': page_size,
+            'total': attendances.count(),
+            'has_next': attendances.count() > end
+        }
+    })
+
+# ===============================
+# VIEWS PARA ESTADÍSTICAS
+# ===============================
+
+@api_view(['GET'])
+@permission_classes([IsInstructorPermission])
+def instructor_dashboard(request):
+    """Dashboard con estadísticas para instructores"""
+    instructor = request.user
+    
+    # Cursos del instructor
+    courses = Course.objects.filter(instructor=instructor)
+    total_courses = courses.count()
+    active_courses = courses.filter(is_active=True).count()
+    
+    # Estudiantes
+    total_students = 0
+    for course in courses:
+        total_students += course.get_students_count()
+    
+    # Sesiones
+    sessions = AttendanceSession.objects.filter(course__instructor=instructor)
+    total_sessions = sessions.count()
+    active_sessions = sessions.filter(is_active=True).count()
+    
+    # Asistencias recientes
+    recent_attendances = Attendance.objects.filter(
+        session__course__instructor=instructor
+    ).select_related('student', 'session', 'session__course').order_by('-created_at')[:10]
+    
+    recent_data = []
+    for attendance in recent_attendances:
+        student_info = attendance.get_student_info()
+        recent_data.append({
+            'student_name': student_info['name'],
+            'course': attendance.session.course.name,
+            'date': attendance.session.date,
+            'status': attendance.get_status_display(),
+            'verified_by_face': attendance.verified_by_face
+        })
+    
+    return Response({
+        'summary': {
+            'total_courses': total_courses,
+            'active_courses': active_courses,
+            'total_students': total_students,
             'total_sessions': total_sessions,
-            'total_attendances': total_attendances,
-            'present': present,
-            'absent': absent,
-            'overall_attendance_rate': (present / total_attendances * 100) if total_attendances > 0 else 0
+            'active_sessions': active_sessions,
+        },
+        'recent_attendances': recent_data
+    })
+
+@api_view(['GET'])
+@permission_classes([IsStudentPermission])
+def student_dashboard(request):
+    """Dashboard con estadísticas para estudiantes"""
+    try:
+        student_profile = request.user.student_profile
+        stats = student_profile.get_attendance_stats()
+        courses = student_profile.get_courses()
+        
+        # Próximas sesiones
+        upcoming_sessions = AttendanceSession.objects.filter(
+            course__fichas=student_profile.ficha,
+            date__gte=timezone.now().date()
+        ).order_by('date', 'start_time')[:5]
+        
+        upcoming_data = []
+        for session in upcoming_sessions:
+            upcoming_data.append({
+                'id': session.id,
+                'course': session.course.name,
+                'date': session.date,
+                'start_time': session.start_time,
+                'end_time': session.end_time,
+                'is_active': session.is_active
+            })
+        
+        return Response({
+            'student_info': {
+                'name': student_profile.get_full_name(),
+                'document': student_profile.documento,
+                'ficha': student_profile.ficha.numero,
+                'ficha_name': student_profile.ficha.nombre,
+                'estado_academico': student_profile.get_estado_academico_display(),
+            },
+            'attendance_stats': stats,
+            'courses': [{'id': c.id, 'name': c.name, 'code': c.code} for c in courses],
+            'upcoming_sessions': upcoming_data
         })
+        
+    except Exception as e:
+        return Response({
+            'error': 'Error obteniendo información del estudiante',
+            'detail': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

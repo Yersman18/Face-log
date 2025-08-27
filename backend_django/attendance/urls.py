@@ -2,19 +2,26 @@
 from django.urls import path
 from . import views
 
+app_name = 'attendance'
+
 urlpatterns = [
     # Cursos
-    path('courses/', views.courses, name='courses'),
-    path('courses/<int:course_id>/', views.course_detail, name='course_detail'),
-    path('courses/<int:course_id>/enroll/', views.enroll_student, name='enroll_student'),
+    path('courses/', views.CourseListCreateView.as_view(), name='course-list-create'),
+    path('courses/<int:pk>/', views.CourseDetailView.as_view(), name='course-detail'),
     
     # Sesiones de asistencia
-    path('sessions/', views.attendance_sessions, name='attendance_sessions'),
-    path('sessions/<int:session_id>/', views.attendance_session_detail, name='attendance_session_detail'),
-    path('sessions/<int:session_id>/report/', views.attendance_report, name='attendance_report'),
+    path('sessions/', views.AttendanceSessionListCreateView.as_view(), name='session-list-create'),
+    path('sessions/<int:pk>/', views.AttendanceSessionDetailView.as_view(), name='session-detail'),
+    path('sessions/<int:session_id>/start/', views.start_attendance_session, name='start-session'),
+    path('sessions/<int:session_id>/close/', views.close_attendance_session, name='close-session'),
+    path('sessions/<int:session_id>/summary/', views.session_attendance_summary, name='session-summary'),
     
-    # Asistencia
-    path('mark/', views.mark_attendance, name='mark_attendance'),
-    path('my-attendance/', views.my_attendance, name='my_attendance'),
-    path('stats/', views.attendance_stats, name='attendance_stats'),
+    # Asistencias
+    path('attendances/', views.AttendanceListView.as_view(), name='attendance-list'),
+    path('attendances/<int:attendance_id>/update/', views.update_attendance, name='update-attendance'),
+    
+    # Dashboards
+    path('instructor/dashboard/', views.instructor_dashboard, name='instructor-dashboard'),
+    path('student/dashboard/', views.student_dashboard, name='student-dashboard'),
+    path('student/history/', views.student_attendance_history, name='student-history'),
 ]
