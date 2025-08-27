@@ -1,1 +1,58 @@
+# =========================================
+# 🐍 Python / Django
+# =========================================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+*.log
+*.pot
+*.pyc
+*.egg-info/
+*.egg
+
+# Virtualenv
 venv/
+env/
+ENV/
+.venv/
+.env/
+.ENV/
+
+# Django stuff
+db.sqlite3
+media/
+staticfiles/
+local_settings.py
+
+# =========================================
+# ⚛️ Node / Next.js (frontend)
+# =========================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.next/
+out/
+dist/
+coverage/
+build/
+
+# =========================================
+# 🔒 Entornos y configuraciones
+# =========================================
+.env
+.env.local
+.env.*.local
+.DS_Store
+Thumbs.db
+
+# =========================================
+# 🚀 Otros
+# =========================================
+.idea/
+.vscode/
+*.swp
