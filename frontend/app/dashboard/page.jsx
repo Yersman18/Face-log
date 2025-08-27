@@ -11,12 +11,12 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const res = await authFetch("http://127.0.0.1:8000/api/auth/profile/");
+        const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL}api/auth/profile/`);
         if (res.ok) {
           const data = await res.json();
           setUser(data);
         } else {
-          router.push("/login"); // si no hay sesión activa
+          router.push("/login");
         }
       } catch (err) {
         console.error("Error cargando perfil:", err);
@@ -38,7 +38,7 @@ export default function DashboardPage() {
       <p className="mb-6">Tu rol es: <b>{user?.role}</b></p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Opciones comunes para todos */}
+        {/* Común para todos */}
         <button
           onClick={() => router.push("/profile")}
           className="p-4 border rounded shadow hover:bg-gray-100"
@@ -46,9 +46,16 @@ export default function DashboardPage() {
           👤 Mi Perfil
         </button>
 
-        {/* Opciones dinámicas según el rol */}
+        {/* Dashboard estudiante */}
         {user?.role === "student" && (
           <>
+            <button
+              onClick={() => router.push("/attendance/courses")}
+              className="p-4 border rounded shadow hover:bg-gray-100"
+            >
+              🎓 Mis Cursos
+            </button>
+
             <button
               onClick={() => router.push("/attendance/my")}
               className="p-4 border rounded shadow hover:bg-gray-100"
@@ -65,6 +72,7 @@ export default function DashboardPage() {
           </>
         )}
 
+        {/* Dashboard instructor */}
         {user?.role === "instructor" && (
           <>
             <button
@@ -80,9 +88,17 @@ export default function DashboardPage() {
             >
               📅 Sesiones de asistencia
             </button>
+
+            <button
+              onClick={() => router.push("/attendance/stats")}
+              className="p-4 border rounded shadow hover:bg-gray-100"
+            >
+              📈 Estadísticas de mis cursos
+            </button>
           </>
         )}
 
+        {/* Dashboard admin */}
         {user?.role === "admin" && (
           <>
             <button

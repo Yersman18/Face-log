@@ -1,3 +1,4 @@
+//frontend/app/excuses/page.jsx
 "use client";
 import { useEffect, useState } from "react";
 import { FileText, Plus, Eye, Clock, CheckCircle, XCircle, AlertTriangle, Calendar } from "lucide-react";
@@ -42,7 +43,7 @@ export default function ExcusesPage() {
     const fetchExcuses = async () => {
       try {
         setLoading(true);
-        const res = await authFetch("http://127.0.0.1:8000/api/excuses/");
+        const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/excuses/`);
         if (!res.ok) throw new Error("Error al obtener excusas");
 
         const data = await res.json();

@@ -1,7 +1,11 @@
 // frontend/lib/api.js
 
-const API_URL = "http://127.0.0.1:8000/api";
-const AUTH_URL = `${API_URL}/auth`;
+// URL base del backend (sin /api)
+export const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+// URL base del API
+const BASE_API_URL = `${API_URL}/api`;
+const AUTH_URL = `${BASE_API_URL}/auth`;
 
 // Guardar tokens en localStorage
 export function saveTokens(access, refresh) {

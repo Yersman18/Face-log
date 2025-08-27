@@ -1,3 +1,4 @@
+//frontend/app/excuses/%5Bid%5D/page.jsx
 "use client";
 import { useEffect, useState } from "react";
 import { ArrowLeft, FileText, CheckCircle, XCircle, Clock, Download, Eye, Calendar, User, MessageSquare, AlertCircle } from "lucide-react";
@@ -36,7 +37,7 @@ export default function ExcuseDetailPage() {
     const fetchExcuse = async () => {
       try {
         setLoading(true);
-        const res = await authFetch(`http://127.0.0.1:8000/api/excuses/${id}/`);
+        const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/excuses/${id}/`);
         if (!res.ok) throw new Error("Error al obtener la excusa");
 
         const data = await res.json();

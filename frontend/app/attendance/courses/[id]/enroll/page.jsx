@@ -1,3 +1,4 @@
+// enroll/page.jsx
 "use client";
 import { useState } from "react";
 import { useParams } from "next/navigation";
@@ -23,7 +24,7 @@ export default function EnrollStudentPage() {
     setMessage("");
 
     try {
-      const res = await authFetch(`http://127.0.0.1:8000/api/attendance/courses/${id}/enroll/`, {
+      const res = await authFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/attendance/courses/${id}/enroll/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ student_id: studentId }),
