@@ -1,3 +1,4 @@
+// face-recognition/register/page.jsx
 "use client";
 import { useState } from "react";
 import { Camera, Upload, User, CheckCircle, XCircle, AlertTriangle, Eye, Trash2, ArrowLeft } from "lucide-react";

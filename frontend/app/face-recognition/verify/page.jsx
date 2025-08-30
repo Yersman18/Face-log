@@ -1,3 +1,4 @@
+// face-recognition/verify/page.jsx
 "use client";
 import { useState } from "react";
 import { Camera, Upload, Shield, CheckCircle, XCircle, AlertTriangle, Eye, Trash2, ArrowLeft, Hash, Scan } from "lucide-react";

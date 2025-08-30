@@ -1,3 +1,4 @@
+// attendance/stats/page.jsx
 "use client";
 import { useEffect, useState } from "react";
 import { BarChart3, Users, Calendar, Clock, CheckCircle, XCircle, AlertCircle, BookOpen } from "lucide-react";

@@ -1,3 +1,4 @@
+// app/login/page.jsx
 "use client";
 import { useState } from "react";
 import { saveTokens } from "@/lib/api";
@@ -22,14 +23,22 @@ export default function LoginPage() {
         body: JSON.stringify({ username, password }),
       });
 
-      if (!res.ok) throw new Error("Credenciales inválidas");
+      const text = await res.text(); // por si backend devuelve HTML en errores
+      if (!res.ok) {
+        throw new Error(`❌ Respuesta no OK: ${res.status} "${text}"`);
+      }
 
-      const data = await res.json();
+      const data = JSON.parse(text);
       saveTokens(data.access, data.refresh);
 
-      window.location.href = "/profile"; // Redirige al perfil
+      const role = data?.user?.role;
+      if (role === "instructor") {
+        window.location.href = "/instructor";
+      } else {
+        window.location.href = "/dashboard";
+      }
     } catch (err) {
-      console.error("❌ Error en login:", err);
+      console.error(err);
       setError("Usuario o contraseña incorrectos");
     } finally {
       setIsLoading(false);
@@ -37,19 +46,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradientDamd-to-br from-slate-900 via-blue-900 to-slate-800 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Patrón de puntos de fondo */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute inset-0" style={{
-          backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px)',
-          backgroundSize: '20px 20px'
-        }}></div>
-      </div>
-      
-      {/* Círculos decorativos */}
-      <div className="absolute top-20 left-20 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl"></div>
-      <div className="absolute bottom-20 right-20 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl"></div>
-      
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* ... (TU MISMO UI TAL CUAL) ... */}
       <div className="w-full max-w-md relative z-10">
         {/* Logo/Header Section */}
         <div className="text-center mb-8">
@@ -60,7 +58,6 @@ export default function LoginPage() {
           <p className="text-blue-200 text-sm">Acceso seguro al sistema</p>
         </div>
 
-        {/* Login Form */}
         <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-8 shadow-2xl">
           <div className="flex items-center justify-center mb-6">
             <Shield className="w-6 h-6 text-blue-300 mr-2" />
@@ -117,14 +114,11 @@ export default function LoginPage() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-0 pr-4 flex items-center text-blue-300 hover:text-blue-200 transition-colors"
                 >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5" />
-                  ) : (
-                    <Eye className="h-5 w-5" />
-                  )}
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>
             </div>
+
             <button
               type="submit"
               disabled={isLoading}
@@ -141,14 +135,11 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Register Link */}
           <div className="mt-8 pt-6 border-t border-white/10">
             <div className="text-center">
-              <p className="text-blue-200 text-sm mb-4">
-                ¿No tienes cuenta?
-              </p>
-              <a 
-                href="/register" 
+              <p className="text-blue-200 text-sm mb-4">¿No tienes cuenta?</p>
+              <a
+                href="/register"
                 className="inline-flex items-center justify-center px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-2xl font-medium transition-all duration-200 transform hover:scale-[1.02] backdrop-blur-sm w-full sm:w-auto"
               >
                 <UserPlus className="w-5 h-5 mr-2" />
@@ -157,12 +148,9 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Footer */}
           <div className="mt-6 pt-4 border-t border-white/10">
             <div className="text-center">
-              <p className="text-blue-200 text-sm">
-                Sistema seguro y protegido
-              </p>
+              <p className="text-blue-200 text-sm">Sistema seguro y protegido</p>
               <div className="flex items-center justify-center mt-2 text-blue-300">
                 <Shield className="w-4 h-4 mr-1" />
                 <span className="text-xs">Cifrado end-to-end</span>
@@ -171,7 +159,6 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Additional info */}
         <div className="text-center mt-6">
           <p className="text-blue-200 text-xs">
             ¿Problemas para acceder?{" "}

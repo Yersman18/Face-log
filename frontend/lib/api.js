@@ -57,7 +57,9 @@ export function clearTokens() {
 }
 
 // Fetch con auth automático
-export async function authFetch(url, options = {}) {
+export async function authFetch(path, options = {}) {
+  const url = path.startsWith("http") ? path : `${BASE_API_URL}${path.startsWith("/") ? "" : "/"}${path}`;
+
   let token = getAccessToken();
 
   if (!options.headers) options.headers = {};

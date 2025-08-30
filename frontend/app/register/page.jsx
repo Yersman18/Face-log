@@ -1,3 +1,4 @@
+// register/page.jsx
 "use client";
 import { useState } from "react";
 import { Eye, EyeOff, Building2, Shield, Lock, User, Mail, UserCheck, CreditCard, ChevronDown } from "lucide-react";

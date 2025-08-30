@@ -8,6 +8,7 @@ urlpatterns = [
     # Cursos
     path('courses/', views.CourseListCreateView.as_view(), name='course-list-create'),
     path('courses/<int:pk>/', views.CourseDetailView.as_view(), name='course-detail'),
+    path("courses/<int:pk>/toggle/", views.toggle_course, name="course-toggle"),  # 👈 aquí
     
     # Sesiones de asistencia
     path('sessions/', views.AttendanceSessionListCreateView.as_view(), name='session-list-create'),

@@ -1,3 +1,4 @@
+// attendance/sessions/[id]/page.jsx
 "use client";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";

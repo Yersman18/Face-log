@@ -2,13 +2,17 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 from .models import User
+from attendance.models import StudentProfile, Ficha  # 🔥 IMPORTANTE
 
 class UserSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
     
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'full_name', 'role', 'student_id', 'profile_image', 'created_at']
+        fields = [
+            'id', 'username', 'email', 'first_name', 'last_name',
+            'full_name', 'role', 'student_id', 'profile_image', 'created_at'
+        ]
         read_only_fields = ['id', 'created_at']
     
     def get_full_name(self, obj):
@@ -20,7 +24,10 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ['username', 'email', 'password', 'password_confirm', 'first_name', 'last_name', 'role', 'student_id']
+        fields = [
+            'username', 'email', 'password', 'password_confirm',
+            'first_name', 'last_name', 'role', 'student_id'
+        ]
     
     def validate(self, data):
         if data['password'] != data['password_confirm']:
@@ -38,6 +45,18 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         user = User(**validated_data)
         user.set_password(password)
         user.save()
+
+        # 🔥 Crear ficha por defecto si no existe
+        ficha, _ = Ficha.objects.get_or_create(numero="DEFAULT123")
+
+        # 🔥 Crear perfil de estudiante automáticamente
+        StudentProfile.objects.create(
+            user=user,
+            documento=user.student_id or "SIN-DOC",
+            ficha=ficha,
+            estado_academico="activo"
+        )
+
         return user
 
 class LoginSerializer(serializers.Serializer):
