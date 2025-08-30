@@ -12,6 +12,14 @@ from .serializers import (
     CourseSerializer, AttendanceSessionSerializer, 
     AttendanceSerializer, AttendanceSessionCreateSerializer
 )
+from .serializers import (
+    CourseSerializer,
+    AttendanceSessionSerializer,
+    AttendanceSessionCreateSerializer,
+    AttendanceSerializer,
+    AttendanceStatsSerializer,
+)
+
 
 from django.contrib.auth import get_user_model
 User = get_user_model()
@@ -467,3 +475,24 @@ def student_dashboard(request):
             'error': 'Error obteniendo información del estudiante',
             'detail': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+@api_view(['POST'])
+@permission_classes([IsInstructorPermission])
+def toggle_course(request, pk):
+    """Activa o desactiva un curso del instructor"""
+    try:
+        course = Course.objects.get(pk=pk, instructor=request.user)
+    except Course.DoesNotExist:
+        return Response({"error": "Curso no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+
+    course.is_active = not course.is_active
+    course.save()
+
+    return Response({
+        "id": course.id,
+        "name": course.name,
+        "code": course.code,
+        "is_active": course.is_active
+    }, status=status.HTTP_200_OK)
+
+    

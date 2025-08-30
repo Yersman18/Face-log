@@ -45,7 +45,6 @@ build/
 # 🔒 Entornos y configuraciones
 # =========================================
 .env
-.env.local
 .env.*.local
 .DS_Store
 Thumbs.db

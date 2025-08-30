@@ -1,3 +1,4 @@
+// Update Profile Page
 "use client";
 import { useState, useEffect } from "react";
 import { authFetch, API_URL } from "@/lib/api";

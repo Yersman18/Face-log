@@ -1,3 +1,4 @@
+# backend_django/authentication/models.py
 from django.db import models
 
 # Create your models here.
@@ -18,5 +19,18 @@ class User(AbstractUser):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
+
+    
+    # 👇 Estas son las nuevas propiedades importantes
+    def is_student(self):
+        return self.role == 'student'
+
+    def is_instructor(self):
+        return self.role == 'instructor'
+
+    def is_admin(self):
+        return self.role == 'admin'
+
     def __str__(self):
         return f"{self.username} ({self.role})"
+    

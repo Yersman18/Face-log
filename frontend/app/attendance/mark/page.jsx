@@ -1,3 +1,4 @@
+// Mark Attendance Page
 "use client";
 import { useState } from "react";
 import { authFetch } from "@/lib/api";
