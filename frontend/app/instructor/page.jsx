@@ -119,6 +119,12 @@ export default function InstructorDashboardPage() {
                 >
                   📚 Gestionar Cursos
                 </Link>
+                <Link
+                  href="/instructor/sessions"
+                  className="inline-block bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-xl font-semibold shadow-lg transition"
+                >
+                  📅 Gestionar Sesiones
+                </Link>
               </div>
           </>
 
@@ -183,3 +189,5 @@ function Card({ title, value, icon }) {
     </div>
   );
 }
+
+

@@ -1,9 +1,8 @@
-// app/instructor/courses/page.jsx
 "use client";
 
 import { useEffect, useState } from "react";
 import { authFetch } from "@/lib/api";
-import { BookOpen, PlusCircle } from "lucide-react";
+import { BookOpen, PlusCircle, Pencil, Trash2, Check, X } from "lucide-react";
 
 export default function InstructorCoursesPage() {
   const [courses, setCourses] = useState([]);
@@ -11,6 +10,9 @@ export default function InstructorCoursesPage() {
   const [error, setError] = useState("");
   const [newCourse, setNewCourse] = useState({ name: "", code: "" });
   const [creating, setCreating] = useState(false);
+
+  const [editingId, setEditingId] = useState(null);
+  const [editData, setEditData] = useState({ name: "", code: "" });
 
   // Cargar cursos del instructor
   const loadCourses = async () => {
@@ -20,15 +22,7 @@ export default function InstructorCoursesPage() {
       if (!res.ok) throw new Error("Error al cargar cursos");
 
       const data = await res.json();
-      console.log("📦 Cursos cargados:", data);
-
-      if (Array.isArray(data)) {
-        setCourses(data);
-      } else if (data.results) {
-        setCourses(data.results);
-      } else {
-        setCourses([]);
-      }
+      setCourses(Array.isArray(data) ? data : data.results || []);
     } catch (err) {
       console.error(err);
       setError("No se pudieron cargar los cursos");
@@ -44,12 +38,8 @@ export default function InstructorCoursesPage() {
         method: "POST",
       });
 
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt);
-      }
+      if (!res.ok) throw new Error(await res.text());
 
-      // recargar lista para ver el cambio
       loadCourses();
     } catch (err) {
       console.error("❌ Error al cambiar estado:", err);
@@ -74,18 +64,53 @@ export default function InstructorCoursesPage() {
         body: JSON.stringify(newCourse),
       });
 
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt);
-      }
+      if (!res.ok) throw new Error(await res.text());
 
       setNewCourse({ name: "", code: "" });
-      await loadCourses(); // recargar lista
+      await loadCourses();
     } catch (err) {
       console.error(err);
       alert("❌ Error creando curso: " + err.message);
     } finally {
       setCreating(false);
+    }
+  };
+
+  // Editar curso
+  const handleSaveEdit = async (courseId) => {
+    try {
+      const res = await authFetch(`/attendance/courses/${courseId}/`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editData),
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+
+      const updated = await res.json();
+      setCourses((prev) => prev.map((c) => (c.id === courseId ? updated : c)));
+      setEditingId(null);
+    } catch (err) {
+      console.error(err);
+      alert("❌ Error guardando curso: " + err.message);
+    }
+  };
+
+  // Eliminar curso
+  const handleDeleteCourse = async (courseId) => {
+    if (!confirm("¿Seguro que deseas eliminar este curso?")) return;
+
+    try {
+      const res = await authFetch(`/attendance/courses/${courseId}/`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+
+      setCourses((prev) => prev.filter((c) => c.id !== courseId));
+    } catch (err) {
+      console.error(err);
+      alert("❌ Error eliminando curso: " + err.message);
     }
   };
 
@@ -153,28 +178,74 @@ export default function InstructorCoursesPage() {
                   key={c.id}
                   className="bg-white/10 border border-white/20 rounded-xl p-4 flex justify-between items-center"
                 >
-                  <div>
-                    <p className="font-bold">{c.name}</p>
-                    <p className="text-sm text-blue-300">{c.code}</p>
-                  </div>
+                  {editingId === c.id ? (
+                    <div className="flex flex-col gap-2">
+                      <input
+                        type="text"
+                        value={editData.name}
+                        onChange={(e) =>
+                          setEditData({ ...editData, name: e.target.value })
+                        }
+                        className="p-1 rounded text-black"
+                      />
+                      <input
+                        type="text"
+                        value={editData.code}
+                        onChange={(e) =>
+                          setEditData({ ...editData, code: e.target.value })
+                        }
+                        className="p-1 rounded text-black"
+                      />
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="font-bold">{c.name}</p>
+                      <p className="text-sm text-blue-300">{c.code}</p>
+                    </div>
+                  )}
 
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`px-2 py-1 text-xs rounded-lg ${
-                        c.is_active
-                          ? "bg-green-600/30 text-green-300"
-                          : "bg-red-600/30 text-red-300"
-                      }`}
-                    >
-                      {c.is_active ? "Activo" : "Inactivo"}
-                    </span>
+                  <div className="flex items-center gap-2">
+                    {editingId === c.id ? (
+                      <>
+                        <button
+                          onClick={() => handleSaveEdit(c.id)}
+                          className="bg-green-600 px-2 py-1 rounded flex items-center gap-1"
+                        >
+                          <Check size={16} /> Guardar
+                        </button>
+                        <button
+                          onClick={() => setEditingId(null)}
+                          className="bg-gray-600 px-2 py-1 rounded flex items-center gap-1"
+                        >
+                          <X size={16} /> Cancelar
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => {
+                            setEditingId(c.id);
+                            setEditData({ name: c.name, code: c.code });
+                          }}
+                          className="bg-blue-600 px-2 py-1 rounded flex items-center gap-1"
+                        >
+                          <Pencil size={16} /> Editar
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCourse(c.id)}
+                          className="bg-red-600 px-2 py-1 rounded flex items-center gap-1"
+                        >
+                          <Trash2 size={16} /> Eliminar
+                        </button>
+                      </>
+                    )}
 
                     <button
                       onClick={() => toggleCourse(c.id)}
                       className={`px-3 py-1 rounded-lg text-sm text-white ${
                         c.is_active
-                          ? "bg-red-600 hover:bg-red-700" // Activo → botón rojo
-                          : "bg-green-600 hover:bg-green-700" // Inactivo → botón verde
+                          ? "bg-red-600 hover:bg-red-700"
+                          : "bg-green-600 hover:bg-green-700"
                       }`}
                     >
                       {c.is_active ? "Desactivar" : "Activar"}
