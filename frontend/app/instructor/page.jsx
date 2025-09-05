@@ -70,7 +70,7 @@ export default function InstructorDashboardPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 p-6">
       <header className="max-w-6xl mx-auto mb-8">
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center justify-between">
           <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-xl">
             <Building2 className="w-6 h-6 text-white" />
           </div>
@@ -79,7 +79,7 @@ export default function InstructorDashboardPage() {
             <p className="text-blue-200 text-sm">Resumen general de cursos y asistencias</p>
           </div>
         </div>
-      </header>
+    </header>
 
       <main className="max-w-6xl mx-auto space-y-8">
         {/* Tarjetas de resumen */}
